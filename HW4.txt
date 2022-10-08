@@ -1,0 +1,120 @@
+
+// ------ Question 1 ------ //
+
+WITH mb AS (
+    SELECT repid, MAX(balance) maxbalance
+    FROM Customer 
+    GROUP BY repid
+),
+cus AS (
+    SELECT c.repid, c.cus_name, c.balance
+    FROM Customer c JOIN mb ON c.repid = mb.repid AND c.balance = mb.maxbalance
+)
+SELECT r.repid AS RepID,
+    TRIM(r.first_name) || ' ' || TRIM(r.last_name) AS RepName,
+    TRIM(c.cus_name) AS Customer,
+    TO_CHAR(c.balance, '$9999990.99') AS Balance
+FROM Rep r
+LEFT JOIN cus c ON r.repid = c.repid;
+
+
+// ------ Question 2 ------ //
+
+SELECT TRIM(DECODE(c.cus_name, NULL, 'Part Total', c.cus_name)) AS NAME,
+    NVL(SUM(DECODE(p.CLASS, 'AP', 1)), 0) AS AP,
+    NVL(SUM(DECODE(p.CLASS, 'HW', 1)), 0) AS HW,
+    NVL(SUM(DECODE(p.CLASS, 'SG', 1)), 0) AS SG,
+    COUNT(p.name) AS "Customer Total"
+FROM Customer c
+    JOIN Orders o ON o.cusid = c.cusid
+    JOIN order_details od ON od.order# = o.order#
+    JOIN Part p ON od.part# = p.part#
+GROUP BY GROUPING SETS (c.cus_name, ());
+
+
+// ------ Question 3 ------ //
+
+SELECT NVL(c.cus_name, 'GRAND TOTAL') cus_name,
+    o.order#, 
+    TO_CHAR(o.order_date, 'MON DD, YYYY') order_date,
+    TO_CHAR(SUM(od.num_ordered * od.quoted_price), '$99999990.99') total_price
+FROM Orders o
+    JOIN Customer c ON o.CUSID = c.CUSID
+    JOIN order_details od ON od.order# = o.order#
+GROUP BY GROUPING SETS ((o.order#, c.cus_name, o.order_date), ())
+HAVING SUM(od.num_ordered * od.quoted_price) > 1000
+ORDER BY 3, 4 DESC;
+
+
+// ------ Question 4 ------ //
+
+WITH t AS (
+    SELECT 
+        p.PART#,
+        P.NAME AS PART_DECRIPTION,
+        COUNT(DISTINCT od.ORDER#) AS APPEAR_IN_ORDERS_NUM,
+        TO_CHAR(NVL(AVG(od.NUM_ORDERED * od.QUOTED_PRICE),0), '$99999990.99') AS AVG_REVENUE
+    FROM Part p
+        LEFT JOIN order_details od ON od.PART# = p.PART#
+    GROUP BY (p.PART#, p.NAME)
+)
+SELECT t.*,
+    RANK() OVER (ORDER BY AVG_REVENUE DESC) RANK_REVENUE
+FROM t
+ORDER BY RANK_REVENUE ASC;
+
+
+
+
+
+
+
+// ------ Question 5 ------ //
+
+SELECT *
+FROM Rep r
+    LEFT JOIN Orders o ON o.repid = r.repid
+
+
+SELECT *
+FROM Rep r
+    LEFT JOIN Orders o ON o.repid = r.repid
+ORDER BY r.last_name, r.first_name, o.order_date
+
+
+
+
+
+
+
+
+
+
+// ------ Question 6 ------ //
+// Most commonly means the part shows up in the orders the most, so it's COUNT
+
+WITH x AS (
+    SELECT od.part#,
+        COUNT(*) ordered_times,
+        RANK() OVER (ORDER BY COUNT(*) DESC) rank
+    FROM order_details od
+    GROUP BY od.PART#
+    ORDER BY ordered_times DESC
+)
+SELECT DISTINCT c.*
+FROM order_details od
+    JOIN (SELECT part# FROM x WHERE rank = 1) t ON od.part# = t.part#
+    JOIN Orders o ON od.order# = o.order#
+    JOIN Customer c ON o.cusid = c.cusid;
+
+
+
+
+
+
+
+
+
+
+
+
