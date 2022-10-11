@@ -64,30 +64,21 @@ FROM t
 ORDER BY RANK_REVENUE ASC;
 
 
-
-
-
-
-
 // ------ Question 5 ------ //
 
-SELECT *
-FROM Rep r
-    LEFT JOIN Orders o ON o.repid = r.repid
-
-
-SELECT *
-FROM Rep r
-    LEFT JOIN Orders o ON o.repid = r.repid
-ORDER BY r.last_name, r.first_name, o.order_date
-
-
-
-
-
-
-
-
+WITH temp AS (
+    SELECT r.repid,
+        TRIM(r.first_name) || ' ' || TRIM(r.last_name) AS RepName,
+        o.cusid,
+        o.order_date,
+        LAG(order_date, 1) OVER (PARTITION BY r.repid ORDER BY o.order_date) as prior_order_date
+    FROM Rep r
+        JOIN Orders o ON o.repid = r.repid
+    ORDER BY r.repid, o.order_date
+)
+SELECT temp.*,
+    order_date - prior_order_date AS num_of_days
+FROM temp
 
 
 // ------ Question 6 ------ //
