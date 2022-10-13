@@ -34,16 +34,24 @@ GROUP BY GROUPING SETS (c.cus_name, ());
 
 // ------ Question 3 ------ //
 
-SELECT NVL(c.cus_name, 'GRAND TOTAL') cus_name,
-    o.order#, 
-    TO_CHAR(o.order_date, 'MON DD, YYYY') order_date,
-    TO_CHAR(SUM(od.num_ordered * od.quoted_price), '$99999990.99') total_price
-FROM Orders o
-    JOIN Customer c ON o.CUSID = c.CUSID
-    JOIN order_details od ON od.order# = o.order#
-GROUP BY GROUPING SETS ((o.order#, c.cus_name, o.order_date), ())
-HAVING SUM(od.num_ordered * od.quoted_price) > 1000
-ORDER BY 3, 4 DESC;
+WITH t AS (
+    SELECT c.cusid,
+        o.order#, 
+        TO_CHAR(o.order_date, 'MON DD, YYYY') order_date,
+        SUM(od.num_ordered * od.quoted_price) tPrice
+    FROM Orders o
+        JOIN Customer c ON o.CUSID = c.CUSID
+        JOIN order_details od ON od.order# = o.order#
+    GROUP BY o.order#, c.cusid, o.order_date
+    HAVING SUM(od.num_ordered * od.quoted_price) > 1000
+    ORDER BY 3, 4 DESC
+)
+SELECT NVL(t.cusid, 'GRAND TOTAL') cusid,
+    t.order#,
+    t.order_date,
+    TO_CHAR(SUM(t.tPrice), '$99999990.99') total_price
+FROM t
+GROUP BY GROUPING SETS ((t.cusid, t.order#, t.order_date), ());
 
 
 // ------ Question 4 ------ //
@@ -53,7 +61,7 @@ WITH t AS (
         p.PART#,
         P.NAME AS PART_DECRIPTION,
         COUNT(DISTINCT od.ORDER#) AS APPEAR_IN_ORDERS_NUM,
-        TO_CHAR(NVL(AVG(od.NUM_ORDERED * od.QUOTED_PRICE),0), '$99999990.99') AS AVG_REVENUE
+        TO_CHAR(NVL(AVG(od.NUM_ORDERED * od.QUOTED_PRICE),0), '$99999990.999') AS AVG_REVENUE
     FROM Part p
         LEFT JOIN order_details od ON od.PART# = p.PART#
     GROUP BY (p.PART#, p.NAME)
