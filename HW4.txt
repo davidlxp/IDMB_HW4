@@ -13,7 +13,7 @@ cus AS (
 SELECT r.repid AS RepID,
     TRIM(r.first_name) || ' ' || TRIM(r.last_name) AS RepName,
     TRIM(c.cus_name) AS Customer,
-    TO_CHAR(c.balance, '$9999990.99') AS Balance
+    TO_CHAR(c.balance, '$9,999,990.99') AS Balance
 FROM Rep r
 LEFT JOIN cus c ON r.repid = c.repid;
 
@@ -46,12 +46,13 @@ WITH t AS (
     HAVING SUM(od.num_ordered * od.quoted_price) > 1000
     ORDER BY 3, 4 DESC
 )
-SELECT NVL(t.cusid, 'GRAND TOTAL') cusid,
-    t.order#,
-    t.order_date,
-    TO_CHAR(SUM(t.tPrice), '$99999990.99') total_price
+SELECT t.cusid, t.order#, t.order_date,
+    TO_CHAR(t.tPrice, '$99,999,990.99') total_price
 FROM t
-GROUP BY GROUPING SETS ((t.cusid, t.order#, t.order_date), ());
+UNION ALL
+SELECT 'GRAND TOTAL', '', '',
+     TO_CHAR(SUM(t.tPrice), '$99,999,990.99') total_price
+FROM t;
 
 
 // ------ Question 4 ------ //
@@ -59,15 +60,16 @@ GROUP BY GROUPING SETS ((t.cusid, t.order#, t.order_date), ());
 WITH t AS (
     SELECT 
         p.PART#,
-        P.NAME AS PART_DECRIPTION,
+        P.NAME AS PART_DESCRIPTION,
         COUNT(DISTINCT od.ORDER#) AS APPEAR_IN_ORDERS_NUM,
-        TO_CHAR(NVL(AVG(od.NUM_ORDERED * od.QUOTED_PRICE),0), '$99999990.999') AS AVG_REVENUE
+        TO_CHAR(NVL(AVG(od.NUM_ORDERED * od.QUOTED_PRICE),0), '$99,999,990.99') AS AVG_REVENUE,
+        NVL(SUM(od.NUM_ORDERED * od.QUOTED_PRICE),0) AS TOTAL_REVENUE
     FROM Part p
         LEFT JOIN order_details od ON od.PART# = p.PART#
     GROUP BY (p.PART#, p.NAME)
 )
-SELECT t.*,
-    RANK() OVER (ORDER BY AVG_REVENUE DESC) RANK_REVENUE
+SELECT t.PART#, t.PART_DESCRIPTION, t.APPEAR_IN_ORDERS_NUM, t.AVG_REVENUE,
+    RANK() OVER (ORDER BY TOTAL_REVENUE DESC) RANK_REVENUE
 FROM t
 ORDER BY RANK_REVENUE ASC;
 
@@ -86,7 +88,7 @@ WITH temp AS (
 )
 SELECT temp.*,
     order_date - prior_order_date AS num_of_days
-FROM temp
+FROM temp;
 
 
 // ------ Question 6 ------ //
@@ -105,15 +107,4 @@ FROM order_details od
     JOIN (SELECT part# FROM x WHERE rank = 1) t ON od.part# = t.part#
     JOIN Orders o ON od.order# = o.order#
     JOIN Customer c ON o.cusid = c.cusid;
-
-
-
-
-
-
-
-
-
-
-
 
